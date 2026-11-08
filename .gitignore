@@ -1,0 +1,11 @@
+node_modules
+.next
+.prisma
+.env
+.env.local
+*.log
+dist
+coverage
+.DS_Store
+tsconfig.tsbuildinfo
+browse-once.mjs
