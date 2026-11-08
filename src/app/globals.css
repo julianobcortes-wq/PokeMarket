@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: 244 241 234;
+  --panel: 255 252 247;
+  --ink: 28 25 21;
+  --muted: 107 100 92;
+  --line: 226 220 210;
+  --stamp: 168 58 42;
+  --up: 31 122 77;
+  --down: 157 44 44;
+  color-scheme: light;
+}
+
+.dark {
+  --paper: 20 18 16;
+  --panel: 32 28 25;
+  --ink: 243 239 232;
+  --muted: 176 168 156;
+  --line: 64 57 50;
+  --stamp: 224 122 95;
+  --up: 126 196 154;
+  --down: 232 150 150;
+  color-scheme: dark;
+}
+
+body {
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
+}
+
+::selection {
+  background: rgb(var(--stamp) / 0.2);
+}
+
+input, select, textarea {
+  background: transparent;
+}
