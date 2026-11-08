@@ -7,6 +7,7 @@ import { decideIndexPublication } from "@/domain/indices";
 import { sortOffers } from "@/domain/offers";
 import { estimateMarket, periodVariation } from "@/domain/price-engine";
 import { portfolioBridge } from "@/domain/portfolio";
+import { safeHttpsUrl } from "@/domain/urls";
 import { identifyCard } from "@/server/tcgdex";
 
 const now = new Date("2026-11-07T12:00:00.000Z");
@@ -188,5 +189,12 @@ describe("documentos e identificação", () => {
 
   it("não inventa carta a partir de uma foto sem provedor", () => {
     expect(identifyCard()).toEqual({ status: "provider_not_configured" });
+  });
+
+  it("aceita só foto https sem credencial na URL", () => {
+    expect(safeHttpsUrl("https://cdn.example.com/carta.jpg")).toBe("https://cdn.example.com/carta.jpg");
+    expect(safeHttpsUrl("javascript:alert(1)")).toBeNull();
+    expect(safeHttpsUrl("data:image/png;base64,aaaa")).toBeNull();
+    expect(safeHttpsUrl("https://user:pass@cdn.example.com/a.jpg")).toBeNull();
   });
 });

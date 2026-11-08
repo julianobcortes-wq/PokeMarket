@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sortOffers } from "@/domain/offers";
 import { prisma } from "@/server/db";
+import { consumeRateLimit, withRateLimit } from "@/server/http-limit";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const limit = consumeRateLimit(request, "offers", 60);
+  if (!limit.ok) return withRateLimit(NextResponse.json({ error: { code: "RATE_LIMIT" } }, { status: 429 }), limit.token);
   const { id } = await context.params;
   const printingId = request.nextUrl.searchParams.get("printing");
   const listings = await prisma.listing.findMany({
@@ -30,5 +33,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         demo: listing.isDemo,
       })),
   ).map(({ isOperationStore: _ignored, ...offer }) => offer);
-  return NextResponse.json({ offers });
+  return withRateLimit(NextResponse.json({ offers }), limit.token);
 }

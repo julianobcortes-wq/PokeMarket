@@ -1,5 +1,6 @@
 import { materializeEntitlements } from "./access";
 import { prisma } from "./db";
+import { sandboxCommerceEnabled } from "./sandbox";
 
 function addInterval(from: Date, interval: string) {
   const next = new Date(from);
@@ -8,6 +9,7 @@ function addInterval(from: Date, interval: string) {
 }
 
 export async function openSandboxSubscription(input: { userId: string; planId: string; priceId: string }) {
+  if (!sandboxCommerceEnabled()) return { error: "A assinatura simulada está desligada neste ambiente." };
   if (input.planId === "free") return { error: "O plano Free não gera cobrança." };
   const price = await prisma.planPrice.findFirst({
     where: { id: input.priceId, planId: input.planId, active: true },
@@ -42,6 +44,9 @@ export async function applyBillingEvent(input: {
     where: { provider_externalId: { provider: input.provider, externalId: input.externalId } },
   });
   if (existing) return { duplicate: true as const };
+  if (input.provider === "sandbox" && !sandboxCommerceEnabled()) {
+    return { error: "A assinatura simulada está desligada neste ambiente." };
+  }
   const subscription = await prisma.subscription.findUnique({
     where: { id: input.subscriptionId },
     include: { plan: true },

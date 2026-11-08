@@ -1,15 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { preferredTranslation } from "@/server/catalog";
 import { prisma } from "@/server/db";
+import { consumeRateLimit, withRateLimit } from "@/server/http-limit";
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const limit = consumeRateLimit(request, "product", 60);
+  if (!limit.ok) return withRateLimit(NextResponse.json({ error: { code: "RATE_LIMIT" } }, { status: 429 }), limit.token);
   const { id } = await context.params;
   const card = await prisma.card.findUnique({
     where: { id },
     include: { translations: true, expansion: true, printings: true },
   });
-  if (!card) return NextResponse.json({ error: { code: "NOT_FOUND" } }, { status: 404 });
-  return NextResponse.json({
+  if (!card) return withRateLimit(NextResponse.json({ error: { code: "NOT_FOUND" } }, { status: 404 }), limit.token);
+  return withRateLimit(NextResponse.json({
     id: card.id,
     number: card.number,
     rarity: card.rarity,
@@ -22,5 +25,5 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       finish: printing.finish,
       stamp: printing.stamp,
     })),
-  });
+  }), limit.token);
 }

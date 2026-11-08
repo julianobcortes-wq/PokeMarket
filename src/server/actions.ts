@@ -18,6 +18,7 @@ import {
   declineSandboxPayment,
 } from "./commerce";
 import { prisma } from "./db";
+import { sandboxCommerceEnabled } from "./sandbox";
 import { reviewApplication, submitSellerApplication } from "./sellers";
 
 function text(formData: FormData, key: string) {
@@ -88,6 +89,9 @@ export async function checkoutAction() {
     });
     redirect(`/checkout/${result.paymentId}`);
   } catch (error) {
+    if (error instanceof CommerceError && error.code === "SANDBOX_DISABLED") {
+      return { error: "O pagamento simulado está desligado neste ambiente." };
+    }
     if (error instanceof CommerceError) return { error: "Não foi possível reservar o estoque." };
     throw error;
   }
@@ -96,6 +100,7 @@ export async function checkoutAction() {
 export async function paySandboxAction(formData: FormData) {
   const user = await currentUser();
   if (!user) redirect("/entrar");
+  if (!sandboxCommerceEnabled()) return { error: "O pagamento simulado está desligado neste ambiente." };
   const paymentId = text(formData, "paymentId");
   const decision = text(formData, "decision");
   if (decision === "decline") {
@@ -110,6 +115,7 @@ export async function paySandboxAction(formData: FormData) {
 export async function completeOrderAction(formData: FormData) {
   const user = await currentUser();
   if (!user) redirect("/entrar");
+  if (!sandboxCommerceEnabled()) return { error: "A conclusão simulada está desligada neste ambiente." };
   await completeOrder(text(formData, "orderId"), user.id);
   redirect(`/pedidos/${text(formData, "orderId")}`);
 }
@@ -174,6 +180,9 @@ export async function createListingAction(formData: FormData) {
   } catch (error) {
     if (error instanceof CommerceError && error.code === "SELLER_NOT_APPROVED") {
       return { error: "A loja precisa estar aprovada para anunciar." };
+    }
+    if (error instanceof CommerceError && error.code === "PHOTO_URL") {
+      return { error: "A foto precisa ser um endereço https, sem usuário ou senha na URL." };
     }
     throw error;
   }
@@ -273,6 +282,7 @@ export async function subscribeAction(formData: FormData) {
 export async function confirmSubscriptionAction(formData: FormData) {
   const user = await currentUser();
   if (!user) redirect("/entrar");
+  if (!sandboxCommerceEnabled()) return { error: "A assinatura simulada está desligada neste ambiente." };
   const subscriptionId = text(formData, "subscriptionId");
   const subscription = await prisma.subscription.findFirst({ where: { id: subscriptionId, userId: user.id } });
   if (!subscription) return { error: "Assinatura não encontrada." };

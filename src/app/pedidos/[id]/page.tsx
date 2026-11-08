@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/action-form";
 import { completeOrderAction } from "@/server/actions";
 import { currentUser } from "@/server/auth";
 import { prisma } from "@/server/db";
+import { sandboxCommerceEnabled } from "@/server/sandbox";
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
@@ -35,7 +36,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </li>
         ))}
       </ul>
-      {order.status === "PAID" ? (
+      {order.status === "PAID" && order.sandbox && sandboxCommerceEnabled() ? (
         <ActionForm action={completeOrderAction} className="mt-4">
           <input type="hidden" name="orderId" value={order.id} />
           <button className="border border-ink px-3 py-2 text-sm">Confirmar recebimento</button>

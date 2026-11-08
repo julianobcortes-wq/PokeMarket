@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/action-form";
 import { confirmSubscriptionAction } from "@/server/actions";
 import { currentUser } from "@/server/auth";
 import { prisma } from "@/server/db";
+import { sandboxCommerceEnabled } from "@/server/sandbox";
 
 export default async function PaySubscriptionPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
@@ -21,15 +22,19 @@ export default async function PaySubscriptionPage({ params }: { params: Promise<
       <h1 className="mt-2 font-serif text-4xl">{subscription.plan.name}</h1>
       <p className="mt-3 text-muted">Nenhum provedor real será chamado. A confirmação grava uma fatura e libera os direitos por webhook idempotente.</p>
       <p className="mt-4 font-mono">{price ? formatMoney(price.amountMinor, price.currency) : "Sem preço"}</p>
-      <ActionForm action={confirmSubscriptionAction} className="mt-6 flex gap-3">
-        <input type="hidden" name="subscriptionId" value={subscription.id} />
-        <button name="decision" value="approve" className="bg-ink px-3 py-2 text-sm text-paper">
-          Simular pagamento aprovado
-        </button>
-        <button name="decision" value="decline" className="border border-ink px-3 py-2 text-sm">
-          Simular recusa
-        </button>
-      </ActionForm>
+      {sandboxCommerceEnabled() ? (
+        <ActionForm action={confirmSubscriptionAction} className="mt-6 flex gap-3">
+          <input type="hidden" name="subscriptionId" value={subscription.id} />
+          <button name="decision" value="approve" className="bg-ink px-3 py-2 text-sm text-paper">
+            Simular pagamento aprovado
+          </button>
+          <button name="decision" value="decline" className="border border-ink px-3 py-2 text-sm">
+            Simular recusa
+          </button>
+        </ActionForm>
+      ) : (
+        <p className="mt-6 text-sm text-muted">A assinatura simulada está desligada neste ambiente. O plano não é liberado sem um provedor de pagamento.</p>
+      )}
     </div>
   );
 }

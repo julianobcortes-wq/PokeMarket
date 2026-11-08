@@ -1,7 +1,9 @@
 import { CardCondition, Finish, Prisma } from "@prisma/client";
 import { settleOrder } from "@/domain/commission";
+import { safeHttpsUrl } from "@/domain/urls";
 import { preferredTranslation } from "./catalog";
 import { prisma } from "./db";
+import { sandboxCommerceEnabled } from "./sandbox";
 
 export class CommerceError extends Error {
   constructor(public code: string) {
@@ -65,6 +67,8 @@ export async function createListing(input: {
   if (input.grader && input.grade) {
     input.gradeKey = `${input.grader}_${input.grade}`.replace(/\s+/g, "");
   }
+  const photoUrl = input.photoUrl ? safeHttpsUrl(input.photoUrl) : null;
+  if (input.photoUrl && !photoUrl) throw new CommerceError("PHOTO_URL");
   const listing = await prisma.listing.create({
     data: {
       sellerId: seller.id,
@@ -78,7 +82,7 @@ export async function createListing(input: {
       priceMinor: input.priceMinor,
       currency: input.currency,
       quantity: input.quantity,
-      photos: input.photoUrl ? { create: { url: input.photoUrl } } : undefined,
+      photos: photoUrl ? { create: { url: photoUrl } } : undefined,
     },
   });
   return listing;
@@ -88,6 +92,7 @@ export async function checkoutFromLines(input: {
   buyerId: string;
   lines: { listingId: string; quantity: number }[];
 }) {
+  if (!sandboxCommerceEnabled()) throw new CommerceError("SANDBOX_DISABLED");
   if (input.lines.length === 0) throw new CommerceError("EMPTY");
   const listings = await prisma.listing.findMany({
     where: { id: { in: input.lines.map((line) => line.listingId) } },
@@ -185,6 +190,7 @@ export async function checkoutFromLines(input: {
 }
 
 export async function approveSandboxPayment(paymentId: string, actorId: string) {
+  if (!sandboxCommerceEnabled()) throw new CommerceError("SANDBOX_DISABLED");
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: {
@@ -258,6 +264,7 @@ export async function approveSandboxPayment(paymentId: string, actorId: string) 
 }
 
 export async function declineSandboxPayment(paymentId: string, actorId: string) {
+  if (!sandboxCommerceEnabled()) throw new CommerceError("SANDBOX_DISABLED");
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
     include: { order: { include: { items: true } } },
@@ -277,7 +284,8 @@ export async function completeOrder(orderId: string, actorId: string) {
     where: { id: orderId },
     include: { sellerOrders: { include: { seller: true } } },
   });
-  if (!order || order.buyerId !== actorId) throw new CommerceError("FORBIDDEN");
+  if (!order || !sandboxCommerceEnabled() || !order.sandbox) throw new CommerceError("SANDBOX_DISABLED");
+  if (order.buyerId !== actorId) throw new CommerceError("FORBIDDEN");
   if (order.status !== "PAID") throw new CommerceError("STATE");
   await prisma.$transaction(async (tx) => {
     for (const sellerOrder of order.sellerOrders) {

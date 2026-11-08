@@ -1,6 +1,6 @@
 # Pagamentos
 
-O provedor em execução é `sandbox`. Ele não fala com Mercado Pago, Stripe ou Adyen. A tela de checkout e a de assinatura dizem que a captura é simulada.
+O provedor em execução é `sandbox`, e só fora de produção quando `SANDBOX_COMMERCE=1`. No site público esse caminho fica desligado: ninguém aprova o próprio pagamento, libera plano pago nem baixa estoque. Ele não fala com Mercado Pago, Stripe ou Adyen. A tela de checkout e a de assinatura dizem que a captura é simulada quando o sandbox está ligado.
 
 Uma venda aprovada no sandbox gera observação com `demo: true`. Ela prova o fluxo, mas fica fora da série pública, da estimativa e da contagem de vendas verificadas. Só um pagamento de provedor real entra na cotação.
 
